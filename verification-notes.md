@@ -1,8 +1,8 @@
-# Verification Notes
 
-- Live workspace loaded successfully at the project preview URL.
-- Desktop layout shows the graphite rail, warm paper canvas, file register, preview stage, local-only status, and generated visual assets.
-- Selecting `Launch Reel.mp4` updates the preview stage to the demo video renderer and changes the footer to `Browser ready`.
-- Selecting `Q4 Product Story.pptx` updates the preview stage to the presentation sample image and changes the header/footer state to `Metadata only` / `Needs converter`.
-- Sample register exposes eight representative formats: MP4, PDF, PPTX, MD, M4A, TIFF, XLSX, ZIP.
-- TypeScript check and production build both completed successfully. Build emitted only a chunk-size advisory.
+## Expanded upgrade verification
+
+The existing public deployment at `https://usbpreview-oqx3nys8.manus.space` remains healthy and still exposes the original USB preview workspace. The new Python IDE and repository-documentation changes are present in the local working tree and require the next project checkpoint before they appear in the public deployment. The local project passes `pnpm check` and `pnpm build`; the build only reports the existing bundle-size advisory.
+
+## Python IDE verification
+
+The current dev preview exposes a Python IDE action. Opening it renders the project explorer, `usb_scan.py` editor, line numbers, save action, Run action with keyboard hint, output console, and the explicit local-runtime bridge message. The existing browser preview remains available through the Back to preview control. The public deployment still points to the previous checkpoint until this revision is saved and published.

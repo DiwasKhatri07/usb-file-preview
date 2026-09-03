@@ -47,6 +47,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { hasDirectoryPicker, scanDirectory, type DirectoryHandleLike } from "@/lib/local-folder";
+import PythonWorkspace from "@/components/PythonWorkspace";
 
 const EMPTY_STAGE_IMAGE = "/manus-storage/usb-preview-empty-stage_b1aada90.png";
 const FORMAT_STACK_IMAGE = "/manus-storage/usb-preview-format-stack_0735ac48.png";
@@ -206,16 +207,16 @@ function extensionFor(name: string) {
 
 function kindForFile(file: File): FileKind {
   const extension = extensionFor(file.name);
-  if (file.type.startsWith("video/") || ["mp4", "webm", "mov", "m4v", "mkv", "avi", "ogv"].includes(extension)) return "video";
-  if (file.type.startsWith("image/") || ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "tif", "tiff", "heic", "avif"].includes(extension)) return "image";
-  if (file.type.startsWith("audio/") || ["mp3", "wav", "m4a", "aac", "ogg", "flac", "opus"].includes(extension)) return "audio";
+  if (file.type.startsWith("video/") || ["mp4", "webm", "mov", "m4v", "mkv", "avi", "ogv", "flv", "wmv", "mpg", "mpeg", "3gp"].includes(extension)) return "video";
+  if (file.type.startsWith("image/") || ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "tif", "tiff", "heic", "avif", "ico", "raw", "cr2", "nef"].includes(extension)) return "image";
+  if (file.type.startsWith("audio/") || ["mp3", "wav", "m4a", "aac", "ogg", "flac", "opus", "wma", "mid", "midi"].includes(extension)) return "audio";
   if (extension === "pdf" || file.type === "application/pdf") return "pdf";
-  if (["md", "markdown", "txt", "log", "json", "xml", "yaml", "yml", "csv", "html", "css", "js", "jsx", "ts", "tsx", "vue", "py", "java", "c", "cpp", "rs", "sh"].includes(extension)) return "text";
+  if (["md", "markdown", "txt", "log", "json", "xml", "yaml", "yml", "csv", "html", "css", "js", "jsx", "ts", "tsx", "vue", "py", "ipynb", "java", "c", "cpp", "rs", "sh", "sql", "toml", "ini", "r"].includes(extension)) return "text";
   if (["ppt", "pptx", "odp", "key"].includes(extension)) return "presentation";
   if (["xls", "xlsx", "ods"].includes(extension)) return "spreadsheet";
   if (["doc", "docx", "odt", "rtf"].includes(extension)) return "document";
   if (["zip", "rar", "7z", "tar", "gz", "bz2"].includes(extension)) return "archive";
-  if (["glb", "gltf", "obj", "fbx", "stl"].includes(extension)) return "model";
+  if (["glb", "gltf", "obj", "fbx", "stl", "3ds", "dae", "blend"].includes(extension)) return "model";
   return "other";
 }
 
@@ -398,6 +399,7 @@ export default function Home() {
   const [rootName, setRootName] = useState("Demo drive");
   const [scanState, setScanState] = useState<"idle" | "scanning">("idle");
   const [scanCount, setScanCount] = useState(0);
+  const [workspaceView, setWorkspaceView] = useState<"preview" | "python">("preview");
   const fileInput = useRef<HTMLInputElement>(null);
   const folderInput = useRef<HTMLInputElement>(null);
 
@@ -513,6 +515,7 @@ export default function Home() {
               <p className="heading-copy">A quiet place to inspect media, documents, and the formats your browser can or cannot render.</p>
             </div>
             <div className="heading-actions">
+              <button className="button button-secondary" onClick={() => setWorkspaceView(workspaceView === "preview" ? "python" : "preview")}><FileCode2 size={15} /> {workspaceView === "preview" ? "Python IDE" : "Back to preview"}</button>
               <button className="button button-secondary" onClick={clearWorkspace}><HardDrive size={15} /> {files.length ? "Reset workspace" : "Reset demo"}</button>
               <button className="button button-primary" onClick={() => fileInput.current?.click()}><Upload size={15} /> Add files</button>
             </div>
@@ -525,7 +528,7 @@ export default function Home() {
             <div className="stat-card stat-card-image"><img src={FORMAT_STACK_IMAGE} alt="File format stack" /><div><span className="stat-kicker">ONE WORKSPACE</span><span className="stat-note">Many file families.<br />One readable register.</span></div></div>
           </div>
 
-          <div className="workbench" onDrop={onDrop} onDragOver={(event) => event.preventDefault()}>
+          {workspaceView === "preview" ? <div className="workbench" onDrop={onDrop} onDragOver={(event) => event.preventDefault()}>
             <section className="file-register">
               <div className="register-header">
                 <div><span className="section-label">01 / FILE REGISTER</span><h2>{rootName}<span className="slash"> / </span><em>root</em></h2></div>
@@ -563,9 +566,9 @@ export default function Home() {
               <div className="preview-canvas"><PreviewCanvas file={activeFile} onBrowse={() => fileInput.current?.click()} /></div>
               {activeFile ? <div className="preview-meta"><div><span className="meta-label">SELECTED FILE</span><strong>{activeFile.name}</strong><span>{activeFile.path}</span></div><CapabilityBadge status={activeFile.status} /></div> : <div className="preview-meta preview-meta-idle"><div><span className="meta-label">NO FILE SELECTED</span><strong>Choose a row to inspect its preview.</strong></div><button className="text-button" onClick={openLocalFolder}>Open a folder <ChevronRight size={14} /></button></div>}
             </section>
-          </div>
+          </div> : <PythonWorkspace />}
 
-          <div className="bottom-note"><div><span className="note-mark"><Usb size={14} /></span><p><strong>Designed for local-first browsing.</strong> This first pass proves the browser workflow. PowerPoint, Office, archive, and 3D rendering can be added in the offline build with dedicated converters.</p></div><button className="text-button" onClick={() => actionComingSoon("Offline architecture notes")}>Discuss offline mode <ChevronRight size={14} /></button></div>
+          <div className="bottom-note"><div><span className="note-mark"><Usb size={14} /></span><p><strong>Designed for local-first browsing.</strong> This workspace is being developed by <strong>Diwas Khatri</strong>. PowerPoint, Office, archive, and 3D rendering can be added in the offline build with dedicated converters.</p></div><button className="text-button" onClick={() => actionComingSoon("Offline architecture notes")}>Discuss offline mode <ChevronRight size={14} /></button></div>
         </div>
       </section>
 

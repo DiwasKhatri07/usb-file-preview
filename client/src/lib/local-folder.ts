@@ -30,7 +30,7 @@ export interface ScannedLocalFile {
   url: string;
 }
 
-const TEXT_EXTENSIONS = new Set(["md", "markdown", "txt", "log", "json", "xml", "yaml", "yml", "csv", "html", "css", "js", "jsx", "ts", "tsx", "vue", "py", "java", "c", "cpp", "rs", "sh"]);
+const TEXT_EXTENSIONS = new Set(["md", "markdown", "txt", "log", "json", "xml", "yaml", "yml", "csv", "html", "css", "js", "jsx", "ts", "tsx", "vue", "py", "ipynb", "java", "c", "cpp", "rs", "sh", "sql", "toml", "ini", "r"]);
 
 const formatBytes = (bytes: number) => {
   if (bytes < 1024) return `${bytes} B`;
@@ -48,16 +48,16 @@ const extensionFor = (name: string) => name.includes(".") ? name.split(".").pop(
 
 const kindFor = (file: File): LocalFileKind => {
   const extension = extensionFor(file.name);
-  if (file.type.startsWith("video/") || ["mp4", "webm", "mov", "m4v", "mkv", "avi", "ogv"].includes(extension)) return "video";
-  if (file.type.startsWith("image/") || ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "tif", "tiff", "heic", "avif"].includes(extension)) return "image";
-  if (file.type.startsWith("audio/") || ["mp3", "wav", "m4a", "aac", "ogg", "flac", "opus"].includes(extension)) return "audio";
+  if (file.type.startsWith("video/") || ["mp4", "webm", "mov", "m4v", "mkv", "avi", "ogv", "flv", "wmv", "mpg", "mpeg", "3gp"].includes(extension)) return "video";
+  if (file.type.startsWith("image/") || ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "tif", "tiff", "heic", "avif", "ico", "raw", "cr2", "nef"].includes(extension)) return "image";
+  if (file.type.startsWith("audio/") || ["mp3", "wav", "m4a", "aac", "ogg", "flac", "opus", "wma", "mid", "midi"].includes(extension)) return "audio";
   if (extension === "pdf" || file.type === "application/pdf") return "pdf";
   if (TEXT_EXTENSIONS.has(extension)) return "text";
   if (["ppt", "pptx", "odp", "key"].includes(extension)) return "presentation";
   if (["xls", "xlsx", "ods"].includes(extension)) return "spreadsheet";
   if (["doc", "docx", "odt", "rtf"].includes(extension)) return "document";
   if (["zip", "rar", "7z", "tar", "gz", "bz2"].includes(extension)) return "archive";
-  if (["glb", "gltf", "obj", "fbx", "stl"].includes(extension)) return "model";
+  if (["glb", "gltf", "obj", "fbx", "stl", "3ds", "dae", "blend"].includes(extension)) return "model";
   return "other";
 };
 
