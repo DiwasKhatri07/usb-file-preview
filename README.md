@@ -4,6 +4,8 @@
 
 **Live demo:** [usbpreview-oqx3nys8.manus.space](https://usbpreview-oqx3nys8.manus.space)
 
+**Repository:** [github.com/DiwasKhatri07/usb-file-preview](https://github.com/DiwasKhatri07/usb-file-preview)
+
 **Developer:** [Diwas Khatri](https://github.com/DiwasKhatri07)
 
 ## 💡 Why this project exists
