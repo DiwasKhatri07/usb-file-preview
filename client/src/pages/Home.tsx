@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { hasDirectoryPicker, scanDirectory, type DirectoryHandleLike } from "@/lib/local-folder";
 
 const EMPTY_STAGE_IMAGE = "/manus-storage/usb-preview-empty-stage_b1aada90.png";
 const FORMAT_STACK_IMAGE = "/manus-storage/usb-preview-format-stack_0735ac48.png";
@@ -394,6 +395,9 @@ export default function Home() {
   const [filter, setFilter] = useState<SupportFilter>("all");
   const [sortMode, setSortMode] = useState<SortMode>("recent");
   const [showSort, setShowSort] = useState(false);
+  const [rootName, setRootName] = useState("Demo drive");
+  const [scanState, setScanState] = useState<"idle" | "scanning">("idle");
+  const [scanCount, setScanCount] = useState(0);
   const fileInput = useRef<HTMLInputElement>(null);
   const folderInput = useRef<HTMLInputElement>(null);
 
@@ -420,15 +424,46 @@ export default function Home() {
   const importFiles = (picked: FileList | null) => {
     if (!picked?.length) return;
     const next = localFiles(picked);
+    const relativeRoot = picked[0]?.webkitRelativePath?.split("/")[0];
     setFiles(next);
+    setRootName(relativeRoot || "Selected files");
     setSelectedId(next[0]?.id ?? null);
     toast.success(`${next.length} ${next.length === 1 ? "file" : "files"} added to the local workspace.`);
+  };
+
+  const openLocalFolder = async () => {
+    if (!hasDirectoryPicker()) {
+      toast.info("This browser does not expose direct folder handles here. The folder picker will open instead.");
+      folderInput.current?.click();
+      return;
+    }
+    try {
+      const picker = (window as Window & { showDirectoryPicker?: () => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker;
+      if (!picker) return;
+      const handle = await picker();
+      setScanState("scanning");
+      setScanCount(0);
+      files.forEach((file) => file.url && URL.revokeObjectURL(file.url));
+      const scanned = await scanDirectory(handle as unknown as DirectoryHandleLike, (count) => setScanCount(count));
+      const next: PreviewFile[] = scanned.map((file, index) => ({ ...file, id: `${file.path}-${file.bytes}-${index}` }));
+      setFiles(next);
+      setRootName(handle.name);
+      setSelectedId(next[0]?.id ?? null);
+      toast.success(`${next.length} files indexed from ${handle.name}.`);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      toast.error("The folder could not be read. Choose it again or use Add files.");
+    } finally {
+      setScanState("idle");
+    }
   };
 
   const clearWorkspace = () => {
     files.forEach((file) => file.url && URL.revokeObjectURL(file.url));
     setFiles([]);
     setSelectedId(null);
+    setRootName("Demo drive");
+    setScanCount(0);
     setQuery("");
     toast("Demo workspace restored.");
   };
@@ -462,9 +497,9 @@ export default function Home() {
 
       <section className="workspace-shell">
         <header className="topbar">
-          <div className="breadcrumb"><span className="breadcrumb-home"><Usb size={14} /></span><ChevronRight size={14} /><span>Preview workspace</span><ChevronRight size={14} /><strong>{files.length ? "USB drive" : "Demo drive"}</strong></div>
+          <div className="breadcrumb"><span className="breadcrumb-home"><Usb size={14} /></span><ChevronRight size={14} /><span>Preview workspace</span><ChevronRight size={14} /><strong>{rootName}</strong></div>
           <div className="topbar-actions">
-            <span className="local-pill"><span /> Local only</span>
+            <span className="local-pill"><span /> {scanState === "scanning" ? `Scanning ${scanCount}` : files.length ? "Local folder loaded" : "Local only"}</span>
             <button className="icon-button" aria-label="More workspace actions" onClick={() => actionComingSoon("Workspace actions")}><MoreHorizontal size={19} /></button>
             <button className="avatar-button" aria-label="Workspace profile">A</button>
           </div>
@@ -473,7 +508,7 @@ export default function Home() {
         <div className="workspace-content">
           <div className="workspace-heading">
             <div>
-              <div className="eyebrow heading-eyebrow">BROWSER PREVIEW LAB <span>·</span> {files.length ? "USB SET LOADED" : "DEMO CONTENT"}</div>
+              <div className="eyebrow heading-eyebrow">BROWSER PREVIEW LAB <span>·</span> {scanState === "scanning" ? "INDEXING LOCAL FOLDER" : files.length ? "LOCAL FOLDER LOADED" : "DEMO CONTENT"}</div>
               <h1>Browse what’s<br /><em>on the drive.</em></h1>
               <p className="heading-copy">A quiet place to inspect media, documents, and the formats your browser can or cannot render.</p>
             </div>
@@ -493,8 +528,8 @@ export default function Home() {
           <div className="workbench" onDrop={onDrop} onDragOver={(event) => event.preventDefault()}>
             <section className="file-register">
               <div className="register-header">
-                <div><span className="section-label">01 / FILE REGISTER</span><h2>{files.length ? "Selected drive" : "Demo drive"}<span className="slash"> / </span><em>root</em></h2></div>
-                <button className="folder-button" onClick={() => folderInput.current?.click()}><FolderOpen size={15} /> Open folder</button>
+                <div><span className="section-label">01 / FILE REGISTER</span><h2>{rootName}<span className="slash"> / </span><em>root</em></h2></div>
+                <button className="folder-button" onClick={openLocalFolder}><FolderOpen size={15} /> {scanState === "scanning" ? `Indexing ${scanCount}…` : "Open USB folder"}</button>
               </div>
               <div className="register-toolbar">
                 <label className="search-field"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search files, folders, extensions" aria-label="Search files" />{query && <button aria-label="Clear search" onClick={() => setQuery("")}><X size={14} /></button>}</label>
@@ -526,7 +561,7 @@ export default function Home() {
             <section className="preview-panel">
               <div className="preview-panel-header"><div><span className="section-label">02 / PREVIEW STAGE</span><span className="preview-stage-status"><span className={activeFile ? activeFile.status : "idle"} />{activeFile ? (activeFile.status === "browser" ? "Browser renderer" : "Metadata only") : "Waiting for selection"}</span></div><div className="preview-actions"><button className="icon-button" aria-label="Zoom out" onClick={() => actionComingSoon("Zoom controls")}><ZoomOut size={15} /></button><button className="icon-button" aria-label="Zoom in" onClick={() => actionComingSoon("Zoom controls")}><ZoomIn size={15} /></button><button className="icon-button" aria-label="More preview actions" onClick={() => actionComingSoon("Preview actions")}><MoreHorizontal size={17} /></button></div></div>
               <div className="preview-canvas"><PreviewCanvas file={activeFile} onBrowse={() => fileInput.current?.click()} /></div>
-              {activeFile ? <div className="preview-meta"><div><span className="meta-label">SELECTED FILE</span><strong>{activeFile.name}</strong><span>{activeFile.path}</span></div><CapabilityBadge status={activeFile.status} /></div> : <div className="preview-meta preview-meta-idle"><div><span className="meta-label">NO FILE SELECTED</span><strong>Choose a row to inspect its preview.</strong></div><button className="text-button" onClick={() => folderInput.current?.click()}>Open a folder <ChevronRight size={14} /></button></div>}
+              {activeFile ? <div className="preview-meta"><div><span className="meta-label">SELECTED FILE</span><strong>{activeFile.name}</strong><span>{activeFile.path}</span></div><CapabilityBadge status={activeFile.status} /></div> : <div className="preview-meta preview-meta-idle"><div><span className="meta-label">NO FILE SELECTED</span><strong>Choose a row to inspect its preview.</strong></div><button className="text-button" onClick={openLocalFolder}>Open a folder <ChevronRight size={14} /></button></div>}
             </section>
           </div>
 
